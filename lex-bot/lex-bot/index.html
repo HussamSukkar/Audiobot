@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Amazon Lex</title>
+    <meta name="author" content="Audiobot">
+    <meta name="description" content="AWS lex audio input">
+    <meta name="keywords" content="Amazon Lex, SDK, Runtime, Browser, JavaScript">
+    <link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3"
+      crossorigin="anonymous"
+    >
+    <link rel="stylesheet" href="./assets/css/styles.css">
+</head>
+  <body class="text-center">
+    <section id="hero">
+      <div class="hero-container">
+        <h1>Welcome</h1>
+        <h2>Speak to our Appointment booking Bot</h2>
+        <a class="btn-get-started" id="btn-get-started">Get Started</a>
+      </div>
+      <img src="https://riverdalehealthcare.com/alphadentalchesterlestreet/wp-content/uploads/sites/7/2019/09/alpha-smile-blue.png" alt=”an artist's rendition of a black hole in space” style=”width:100px;height:100px;position: relative; top:500px;">
+    </section><!-- End Hero Section -->
+    <div class="container mt-7">
+      <div class="row">
+        <div id="bot-container">
+          <div class="bot-chat-frame">
+            <div id="bot-chat-container">
+              <div class="bot-chat">
+                <div class="bot-chat-header">
+                  <div class="bot-header-profile">
+                    <div class="bot-header-profile-name">Bard Bot</div>
+                    <div class="bot-header-profile-intro">
+                      <span>
+                        Hi there, I'm Bard Bot! 👋 I'm here to help you book a dentist appointment!😊
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="bot-chat-body">
+                  <div class="bot-conversation-container">
+                    <div class="bot-conversation-body-parts">
+                      <div class="bot-conversation-parts-wrapper">
+                        <div class="bot-conversation-parts">
+                          <div class="bot-conversation-part bot-conversation-part-admin">
+                            <div class="bot-comment-container bot-comment-container-admin" id="transcript">
+
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="bot-chat-bar">
+            <div class="bot-chat-bar-message">
+              <span id="recording-state">Recording ...</span>
+              <button type="button" class="btn send-btn" id="start-record-btn">
+                Record
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="launch" class="bot-launcher-frame">
+          <div class="bot-launcher">
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js" integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aws-sdk/2.1069.0/aws-sdk.min.js"></script>
+    <script src="./assets/vendor/aws-lex-audio.min.js" type="text/javascript"></script>
+    <script src="./assets/js/renderer.js" type="text/javascript"></script>
+    <script type="text/javascript">
+      const botContainer = document.getElementById('bot-container');
+      botContainer.style.display = 'none';
+
+      let config;
+      let conversation;
+      let logs = "";
+
+      $("#btn-get-started").click( function() {
+        $("#bot-container").toggle("fast");
+      });
+      $("#launch").click( function() {
+        $("#bot-container").toggle("fast");
+      });
+
+      // const waveform = window.Waveform();
+
+      const recordingState = document.getElementById('recording-state');
+      recordingState.style.display = 'none';
+
+      const transcript = document.getElementById('transcript');
+      transcript.innerHTML = logs;
+
+      const startBtn = document.getElementById('start-record-btn');
+      startBtn.style.display = 'block';
+
+      startBtn.onclick = function () {
+        const ACCESS_KEY="AKIA6IQLIG22H2TGFCWI";
+        const SECRET_KEY="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";
+        const BOT_NAME = 'AudioAppointment';
+
+        AWS.config.credentials = new AWS.Credentials(ACCESS_KEY, SECRET_KEY, null);
+        AWS.config.region = 'eu-west-2';
+
+        config = {
+          lexConfig: {
+            botName: BOT_NAME,
+          }
+        };
+
+        const stateHandler = (state) => {
+          if (state === 'Listening') {
+            startBtn.style.display = 'none';
+            recordingState.style.display = 'block';
+            recordingState.innerText = 'Recording...';
+            // waveform.prepCanvas();
+          }
+          if (state === 'Sending') {
+            startBtn.style.display = 'none';
+            recordingState.style.display = 'block';
+            recordingState.innerText = 'Sending...';
+            // waveform.clearCanvas();
+          }
+          if (state === 'Passive') {
+            startBtn.style.display = 'block';
+            recordingState.style.display = 'none';
+            // recordingState.innerText = 'Passive...';
+          }
+        };
+
+        const dataHandler = (data) => {
+          const newLogs = `
+            <div class="bot-comment-container bot-comment-container-admin">
+              <div class="bot-comment">
+                <div class="bot-blocks">
+                  <div class="bot-block bot-block-paragraph">
+                    ${data.inputTranscript}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="bot-comment-container bot-comment-container-admin">
+              <div class="bot-comment">
+                <div class="bot-blocks">
+                  <div class="bot-block bot-block-paragraph">
+                    ${data.message}
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+          logs = `${logs}${newLogs}`;
+          transcript.innerHTML = logs;
+
+          const conversationParts = document.getElementsByClassName("bot-comment-container");
+          conversationParts.scrollTop = conversationParts.scrollHeight;
+        };
+
+        const errorHandler = (error) => {
+          recordingState.textContent = error;
+        };
+
+        const visualizer = (timeDomain, bufferLength) => {
+          // waveform.visualizeAudioBuffer(timeDomain, bufferLength);
+        };
+
+        conversation = new LexAudio.conversation(
+          config,
+          stateHandler,
+          dataHandler,
+          errorHandler,
+          visualizer
+        );
+
+        conversation.advanceConversation();
+      };
+    </script>
+  </body>
+</html>
